@@ -4,6 +4,8 @@ import java.util.List;
 
 public class Comment {
     private String id;
+    private int commenter;
+    private int postId;
     private String content;
     private String timestamp;
     private int likes;
@@ -11,8 +13,10 @@ public class Comment {
     private User user;
     private List<Reply> replies;
 
-    public Comment(String id, String content, String timestamp, int likes, int replyCount, User user, List<Reply> replies) {
+    public Comment(String id, int commenter, int postId, String content, String timestamp, int likes, int replyCount, User user, List<Reply> replies) {
         this.id = id;
+        this.commenter = commenter;
+        this.postId = postId;
         this.content = content;
         this.timestamp = timestamp;
         this.likes = likes;
@@ -21,12 +25,30 @@ public class Comment {
         this.replies = replies;
     }
 
+    public Comment() {
+
+    }
+
     public String getId() {
         return id;
     }
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public int getCommenter() {
+        return commenter;
+    }
+
+    public void setCommenter(int commenter) {this.commenter = commenter; }
+
+    public int getPostId() {
+        return postId;
+    }
+
+    public void setPostId(int postId) {
+        this.postId = postId;
     }
 
     public String getContent() {

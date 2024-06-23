@@ -4,8 +4,10 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -16,11 +18,22 @@ import com.example.flapflap_front.R;
 import com.example.flapflap_front.model.Comment;
 import com.example.flapflap_front.model.User;
 
+import java.io.IOException;
 import java.util.List;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentViewHolder> {
     private List<Comment> commentList;
     private Context context;
+
+    private Comment comment;
 
     public CommentAdapter(List<Comment> commentList, Context context) {
         this.commentList = commentList;
@@ -36,7 +49,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
 
     @Override
     public void onBindViewHolder(@NonNull CommentViewHolder holder, int position) {
-        Comment comment = commentList.get(position);
+        comment = commentList.get(position);
         User user = comment.getUser();
 
         holder.usernameTextView.setText(user.getNickname());
@@ -57,6 +70,44 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         ReplyAdapter replyAdapter = new ReplyAdapter(comment.getReplies(), context);
         holder.repliesRecyclerView.setLayoutManager(new LinearLayoutManager(context));
         holder.repliesRecyclerView.setAdapter(replyAdapter);
+
+        holder.likeCommentButton.setOnClickListener(v -> {
+            int postId = comment.getPostId(); // 示例值
+            int commenter = comment.getCommenter(); // 示例值
+            String content = comment.getContent(); // 示例值
+
+            likeComment(postId, commenter, content, holder);
+        });
+    }
+
+    private void likeComment(int postId, int commenter, String content, CommentViewHolder holder) {
+        String url = "http://127.0.0.1:1207/server/comment/like?id=" + postId;
+
+        OkHttpClient client = new OkHttpClient();
+        MediaType JSON = MediaType.get("application/json; charset=utf-8");
+        String json = "{\"postId\":" + postId + ",\"commenter\":" + commenter + ",\"content\":\"" + content + "\"}";
+        RequestBody body = RequestBody.create(json, JSON);
+
+        Request request = new Request.Builder()
+                .url(url)
+                .post(body)
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                Toast.makeText(holder.itemView.getContext(), "点赞失败", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                        comment.setLikes(comment.getLikes() + 1);
+                        holder.likesTextView.setText(String.valueOf(comment.getLikes()));
+
+                }
+            }
+        });
     }
 
     @Override
@@ -77,6 +128,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         TextView likesTextView;
         TextView replyCountTextView;
         RecyclerView repliesRecyclerView;
+        ImageView likeCommentButton;
 
         CommentViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -87,6 +139,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             likesTextView = itemView.findViewById(R.id.comm_likes);
             replyCountTextView = itemView.findViewById(R.id.reply_count);
             repliesRecyclerView = itemView.findViewById(R.id.replyRecyclerView);
+            likeCommentButton = itemView.findViewById(R.id.comm_likeButton);
         }
     }
 }

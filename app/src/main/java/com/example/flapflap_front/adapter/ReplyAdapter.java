@@ -39,7 +39,9 @@ public class ReplyAdapter extends RecyclerView.Adapter<ReplyAdapter.ReplyViewHol
         User user = reply.getUser();
 
         holder.replyUsernameTextView.setText(user.getNickname());
+        holder.replyTimestampTextView.setText(reply.getTimestamp());
         holder.replyContentTextView.setText(reply.getContent());
+        holder.replyLikesTextView.setText(String.valueOf(reply.getLikes()));
 
         // 加载用户头像
         Glide.with(context)

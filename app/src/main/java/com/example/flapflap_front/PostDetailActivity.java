@@ -18,6 +18,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.flapflap_front.adapter.CommentAdapter;
+import com.example.flapflap_front.model.Comment;
+import com.example.flapflap_front.model.Reply;
+import com.example.flapflap_front.model.User;
 import com.squareup.picasso.Picasso;
 
 import org.json.JSONArray;
@@ -25,6 +29,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -41,6 +47,8 @@ public class PostDetailActivity extends AppCompatActivity {
     private int likes;
     private int reply_likes;
     private int commentCount;
+    private CommentAdapter commentsAdapter;
+    private List<Comment> commentList = new ArrayList<>();
     private TextView likesTextView;
 
     private ImageButton backButton;
@@ -50,7 +58,7 @@ public class PostDetailActivity extends AppCompatActivity {
     private ImageView postImageView;
     private ImageView likeButton, commentButton, reply_likeButton;
     private TextView likeCountTextView, commentCountTextView, reply_likeCount;
-    private RecyclerView commentList;
+    private RecyclerView recyclerViewComments;
     private EditText commentEditText;
     private Button sendCommentButton;
 
@@ -84,7 +92,7 @@ public class PostDetailActivity extends AppCompatActivity {
         });
 
         likesTextView = findViewById(R.id.like_count);
-        Button likeButton = findViewById(R.id.btn_like);
+        ImageView likeButton = findViewById(R.id.btn_like);
         // 示例：设置点赞按钮的点击事件
         likeButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -123,8 +131,12 @@ public class PostDetailActivity extends AppCompatActivity {
         });
 
         // 示例：设置评论列表的 RecyclerView
-        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
-        commentList.setLayoutManager(layoutManager);
+        recyclerViewComments = findViewById(R.id.comment_list);
+        commentsAdapter = new CommentAdapter(commentList, this);
+        recyclerViewComments.setAdapter(commentsAdapter);
+        recyclerViewComments.setLayoutManager(new LinearLayoutManager(this));
+
+        loadComments(postId);
     }
 
     private void getPostDetail(int postId, int communityId) {
@@ -163,6 +175,75 @@ public class PostDetailActivity extends AppCompatActivity {
                             e.printStackTrace();
                         }
                     });
+                }
+            }
+        });
+    }
+
+    private void loadComments(int postId) {
+        String url = "http://127.0.0.1:1207/server/comment/searchByPost?id=" + postId;
+        OkHttpClient client = new OkHttpClient();
+
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                runOnUiThread(() -> Toast.makeText(PostDetailActivity.this, "获取评论失败", Toast.LENGTH_SHORT).show());
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    String responseData = response.body().string();
+                    try {
+                        JSONArray jsonArray = new JSONArray(responseData);
+                        commentList.clear();
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            JSONObject jsonObject = jsonArray.getJSONObject(i);
+
+                            // 解析 user 对象
+                            JSONObject userObject = jsonObject.getJSONObject("user");
+                            User user = new User();
+                            user.setAvatar(userObject.getString("avatar"));
+                            user.setNickname(userObject.getString("nickname"));
+
+                            Comment comment = new Comment();
+                            comment.setUser(user);
+                            comment.setCommenter(jsonObject.getInt("commenter"));
+                            comment.setPostId(jsonObject.getInt("postId"));
+                            comment.setTimestamp(jsonObject.getString("ctime"));
+                            comment.setContent(jsonObject.getString("content"));
+                            comment.setLikes(jsonObject.getInt("likes"));
+
+                            JSONArray repliesArray = jsonObject.getJSONArray("incomments");
+                            List<Reply> replies = new ArrayList<>();
+                            for (int j = 0; j < repliesArray.length(); j++) {
+                                JSONObject replyObject = repliesArray.getJSONObject(j);
+
+                                // 解析 user 对象
+                                JSONObject replyUserObject = replyObject.getJSONObject("user");
+                                User replyUser = new User();
+                                replyUser.setAvatar(replyUserObject.getString("avatar"));
+                                replyUser.setNickname(replyUserObject.getString("nickname"));
+
+                                Reply reply = new Reply();
+                                reply.setUser(replyUser);
+                                reply.setTimestamp(replyObject.getString("ctime"));
+                                reply.setContent(replyObject.getString("content"));
+                                reply.setLikes(replyObject.getInt("likes"));
+                                replies.add(reply);
+                            }
+                            comment.setReplies(replies);
+
+                            commentList.add(comment);
+                        }
+                        runOnUiThread(() -> commentsAdapter.notifyDataSetChanged());
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         });

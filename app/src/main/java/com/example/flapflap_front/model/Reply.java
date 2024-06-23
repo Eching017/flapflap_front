@@ -3,16 +3,20 @@ package com.example.flapflap_front.model;
 public class Reply {
     private String id;
     private String content;
-    private long timestamp;
+    private String timestamp;
     private int likes;
     private User user;
 
-    public Reply(String id, String content, long timestamp, int likes, User user) {
+    public Reply(String id, String content, String timestamp, int likes, User user) {
         this.id = id;
         this.content = content;
         this.timestamp = timestamp;
         this.likes = likes;
         this.user = user;
+    }
+
+    public Reply() {
+
     }
 
     public String getId() {
@@ -31,12 +35,12 @@ public class Reply {
         this.content = content;
     }
 
-    public long getTimestamp() {
+    public String getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
+    public String setTimestamp(String timestamp) {
+        return timestamp;
     }
 
     public int getLikes() {
