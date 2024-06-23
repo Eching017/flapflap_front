@@ -7,12 +7,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CompoundButton;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -20,16 +16,24 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.example.flapflap_front.adapter.PostAdapter;
+import com.example.flapflap_front.model.Post;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
 
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.FormBody;
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -41,8 +45,10 @@ public class CommunityActivity extends AppCompatActivity {
     private Button btnAll, btnLatestPosts, btnLatestComments;
     private TextView communityNameTextView;
     private ImageView communityIconImageView;
-    private RecyclerView postList;
+    private List<Post> postList;
     private FloatingActionButton fabCreatePost;
+    private RecyclerView recyclerView;
+    private PostAdapter postAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,8 +61,13 @@ public class CommunityActivity extends AppCompatActivity {
         btnLatestComments = findViewById(R.id.btn_latest_comments);
         communityNameTextView = findViewById(R.id.community_name);
         communityIconImageView = findViewById(R.id.community_icon);
-        postList = findViewById(R.id.post_list);
         fabCreatePost = findViewById(R.id.fab_create_post);
+
+        recyclerView = findViewById(R.id.post_list);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        postList = new ArrayList<>();
+        postAdapter = new PostAdapter(this, postList);
+        recyclerView.setAdapter(postAdapter);
 
         if (backButton != null) {
             backButton.setOnClickListener(new View.OnClickListener() {
@@ -87,10 +98,12 @@ public class CommunityActivity extends AppCompatActivity {
         });
 
         fabCreatePost.setOnClickListener(new View.OnClickListener() {
+            int communityId = getIntent().getIntExtra("COMMUNITY_ID", -1);
             @Override
             public void onClick(View v) {
                 // 跳转到发布帖子编辑页面
                 Intent intent = new Intent(CommunityActivity.this, CreatePostActivity.class);
+                intent.putExtra("COMMUNITY_ID", communityId);
                 startActivity(intent);
             }
         });
@@ -124,6 +137,7 @@ public class CommunityActivity extends AppCompatActivity {
         int communityId = getIntent().getIntExtra("COMMUNITY_ID", -1);
         if (communityId != -1) {
             fetchCommunityInfo(communityId);
+            fetchPostList(communityId);
         }
     }
 
@@ -180,6 +194,59 @@ public class CommunityActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    public void fetchPostList(int communityId) {
+        OkHttpClient client = new OkHttpClient();
+
+        // 构建请求URL
+        HttpUrl.Builder urlBuilder = HttpUrl.parse("http://127.0.0.1:1207/server/post/searchByCommunity").newBuilder();
+        urlBuilder.addQueryParameter("id", String.valueOf(communityId)); // 传递社区ID作为查询参数
+        String url = urlBuilder.build().toString();
+
+        // 构建请求
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+
+        // 发起异步请求
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                try {
+                    if (response.isSuccessful()) {
+                        String responseBody = response.body().string();
+                        List<Post> posts = parsePosts(responseBody); // 解析响应体中的 JSON 数据
+                        if (posts != null) {
+                            // 更新UI（在UI线程操作）
+                            runOnUiThread(() -> {
+                                postList.addAll(posts);
+                                postAdapter.notifyDataSetChanged();
+                            });
+                        }
+                    } else {
+                        // 处理请求失败的情况
+                        Log.e(TAG, "Request failed with status code: " + response.code());
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Exception occurred during onResponse: ", e);
+                } finally {
+                    response.close(); // 确保关闭响应体以避免资源泄漏
+                }
+            }
+
+            @Override
+            public void onFailure(Call call, IOException e) {
+                // 处理网络请求失败的情况
+                Log.e(TAG, "Network request failed: ", e);
+            }
+        });
+    }
+
+    private List<Post> parsePosts(String responseBody) {
+        Gson gson = new Gson();
+        Type postListType = new TypeToken<List<Post>>(){}.getType();
+        return gson.fromJson(responseBody, postListType);
     }
 }
 

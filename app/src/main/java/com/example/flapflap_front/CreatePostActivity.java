@@ -8,20 +8,38 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class CreatePostActivity extends AppCompatActivity {
 
     private static final int REQUEST_IMAGE_PICK = 1;
 
     private EditText postEditText;
+    private int communityId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_post);
+
+        // 获取传递过来的社区 ID
+        communityId = getIntent().getIntExtra("COMMUNITY_ID", -1);
 
         // 初始化视图
         postEditText = findViewById(R.id.edit_text_post);
@@ -52,9 +70,11 @@ public class CreatePostActivity extends AppCompatActivity {
         btnPublish.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // 在这里处理发布按钮点击事件
+
+                int userId = 1; //默认id
                 String postText = postEditText.getText().toString();
-                // 发布逻辑...
+
+                addPost(communityId, userId, postText);
             }
         });
 
@@ -104,5 +124,70 @@ public class CreatePostActivity extends AppCompatActivity {
 
     private void openSelectTopicDialog() {
         // 打开一个对话框或新活动，让用户选择或输入话题
+    }
+
+    private void addPost(int communityId, int userId, String content) {
+        String url = "http://127.0.0.1:1207/server/post/addPost";
+
+        OkHttpClient client = new OkHttpClient();
+
+        // 创建请求体
+        MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
+        JSONObject requestBody = new JSONObject();
+        try {
+            requestBody.put("communityId", communityId);
+            requestBody.put("poster", userId);
+            requestBody.put("content", content);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        RequestBody body = RequestBody.create(mediaType, requestBody.toString());
+
+        // 创建请求
+        Request request = new Request.Builder()
+                .url(url)
+                .post(body)
+                .build();
+
+        // 发送请求
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                String responseData = response.body().string();
+                try {
+                    JSONObject jsonResponse = new JSONObject(responseData);
+                    boolean success = jsonResponse.getBoolean("success");
+                    if (success) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(CreatePostActivity.this, "帖子发布成功", Toast.LENGTH_SHORT).show();
+                                // 帖子发布成功后的处理，如关闭页面或刷新帖子列表等
+                                finish();
+                            }
+                        });
+                    } else {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(CreatePostActivity.this, "帖子发布失败", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onFailure(Call call, IOException e) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(CreatePostActivity.this, "网络错误，帖子发布失败", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        });
     }
 }

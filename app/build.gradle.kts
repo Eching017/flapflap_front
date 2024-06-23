@@ -41,6 +41,7 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.recyclerview)
     implementation(libs.glide)
+    implementation(libs.picasso)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

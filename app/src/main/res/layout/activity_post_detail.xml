@@ -21,7 +21,8 @@
             android:layout_height="56dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="back_button"
-            android:src="@android:drawable/ic_menu_revert" />
+            android:src="@android:drawable/ic_menu_revert"
+            tools:ignore="TouchTargetSizeCheck" />
 
         <TextView
             android:id="@+id/tv_title"
@@ -100,14 +101,13 @@
                 android:textSize="16sp"
                 android:layout_marginTop="8dp"/>
 
-            <ImageView
-                android:id="@+id/post_image"
-                android:layout_width="match_parent"
+            <LinearLayout
+                android:id="@+id/imagesContainer"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:scaleType="centerCrop"
-                android:visibility="gone"
-                android:contentDescription="post_image"/>
+                android:layout_below="@id/post_content"
+                android:layout_marginTop="16dp"
+                android:orientation="vertical" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -160,7 +160,8 @@
                 android:id="@+id/comment_list"
                 android:layout_width="match_parent"
                 android:layout_height="299dp"
-                android:layout_marginTop="16dp" />
+                android:layout_marginTop="16dp"
+                tools:listitem="@layout/item_comment" />
         </LinearLayout>
     </ScrollView>
 
